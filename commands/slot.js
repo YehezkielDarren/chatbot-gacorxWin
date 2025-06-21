@@ -26,6 +26,7 @@ module.exports = {
     const userId = message.author.id;
     const betAmount = parseInt(args[0], 10);
     const stats = readStats();
+    const PITY_THRESHOLD = 75;
 
     // --- VALIDASI ---
     if (isNaN(betAmount) || betAmount <= 0) {
@@ -48,10 +49,17 @@ module.exports = {
     stats[userId].plays += 1;
 
     // --- LOGIKA PERMAINAN ---
-    const items = ["🍒", "🍊", "🍋", "🍉", "🍇", "⭐", "💎"];
-    const reels = [];
-    for (let i = 0; i < 3; i++) {
-      reels.push(items[Math.floor(Math.random() * items.length)]);
+    // Cek Pity System
+    if (stats[userId].pityCounter >= PITY_THRESHOLD) {
+      forcedWin = true;
+      const winningItem = items[Math.floor(Math.random() * items.length)];
+      // Paksa menang dengan dua item yang sama
+      reels = [winningItem, winningItem, items.find((i) => i !== winningItem)];
+    } else {
+      // Logika normal jika tidak ada pity
+      for (let i = 0; i < 3; i++) {
+        reels.push(items[Math.floor(Math.random() * items.length)]);
+      }
     }
 
     const resultMessage = `[ ${reels.join(" | ")} ]`;
@@ -60,18 +68,38 @@ module.exports = {
     let resultTitle = "Anda Kalah!";
     let color = "#FF0000"; // Merah untuk kalah
 
-    if (reels[0] === reels[1] && reels[1] === reels[2]) {
-      win = true;
-      winnings = betAmount * 5; // Jackpot 5x lipat
-      stats[userId].balance += winnings;
-      resultTitle = "JACKPOT! 🎰 Anda Menang Besar!";
-      color = "#FFD700"; // Emas untuk jackpot
+    if (forcedWin || (reels[0] === reels[1] && reels[1] === reels[2])) {
+      // Jackpot (tidak bisa didapat dari pity)
+      if (!forcedWin && reels[0] === reels[1] && reels[1] === reels[2]) {
+        win = true;
+        winnings = betAmount * 5; // Jackpot 5x lipat
+        stats[userId].balance += winnings;
+        resultTitle = "JACKPOT! 🎰 Anda Menang Besar!";
+        color = "#FFD700"; // Emas untuk jackpot
+      } else {
+        // Kemenangan biasa (atau dari pity)
+        win = true;
+        winnings = betAmount * 2; // Kemenangan kecil 2x lipat
+        stats[userId].balance += winnings;
+        resultTitle = forcedWin ? "Kemenangan Pity! ✨" : "Anda Menang!";
+        color = "#00FF00"; // Hijau untuk menang
+      }
     } else if (reels[0] === reels[1] || reels[1] === reels[2]) {
+      // Kemenangan biasa (jika pity tidak aktif)
       win = true;
       winnings = betAmount * 2; // Kemenangan kecil 2x lipat
       stats[userId].balance += winnings;
       resultTitle = "Anda Menang!";
-      color = "#00FF00"; // Hijau untuk menang
+      color = "#00FF00";
+    }
+
+    // --- UPDATE PITY COUNTER ---
+    if (win) {
+      // Jika menang, reset counter
+      stats[userId].pityCounter = 0;
+    } else {
+      // Jika kalah, tambah counter
+      stats[userId].pityCounter += 1;
     }
 
     // Tulis data terbaru ke file

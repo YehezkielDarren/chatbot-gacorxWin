@@ -2,99 +2,105 @@ const { EmbedBuilder } = require("discord.js");
 const fs = require("fs");
 const path = require("path");
 
-const dbPath = path.join(__dirname, "..", "/db/user-stats.json");
+const dbPath = path.join(__dirname, "..", "db", "user-stats.json");
 
 const readStats = () => {
   try {
     const data = fs.readFileSync(dbPath, "utf8");
     return JSON.parse(data);
   } catch (error) {
-    // Jika file tidak ada atau kosong, kembalikan objek kosong
     return {};
   }
 };
 
 const writeStats = (data) => {
-  try {
-    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), "utf8");
-  } catch (error) {
-    console.error("Gagal menulis ke judi_stats.json:", error);
-  }
+  fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
 };
 
 module.exports = {
-  name: "judi",
-  description:
-    "Gacha nomor acak untuk menguji keberuntunganmu!\nangka '7777' adalah jackpot!\nangka '9500' adalah super rare!\nangka '8000' adalah rare!",
-  usage: "!judi",
-  aliases: ["slot", "gacha"],
-
+  name: "slot",
+  description: "Mainkan mesin slot dengan taruhan!",
+  aliases: ["judi", "gacha"],
+  usage: "!slot <nominal_taruhan>",
   execute(message, args) {
+    const userId = message.author.id;
+    const betAmount = parseInt(args[0], 10);
     const stats = readStats();
-    const playerId = message.author.id;
 
-    let playCount = stats[playerId] ? stats[playerId].playCount : 0;
+    // --- VALIDASI ---
+    if (isNaN(betAmount) || betAmount <= 0) {
+      return message.reply("Harap masukkan nominal taruhan yang valid.");
+    }
 
-    let angkaRandom;
-    // 2. LOGIKA BARU: "PITY SYSTEM"
-    // Untuk 3 permainan pertama, berikan kemenangan (Rare atau Super Rare)
-    if (playCount < 3) {
-      console.log(
-        `Pemain ${
-          message.author.tag
-        } sedang dalam fase 'honeymoon' (putaran ke-${playCount + 1}).`
+    if (!stats[userId] || stats[userId].balance < betAmount) {
+      return message.reply(
+        "Saldo Anda tidak cukup untuk melakukan taruhan ini."
       );
-      // Hasilkan angka acak di rentang Rare atau Super Rare (8001 - 9999)
-      angkaRandom = 8001 + Math.floor(Math.random() * 1999);
-    } else {
-      // Setelah 3x main, gunakan probabilitas normal
-      angkaRandom = Math.floor(Math.random() * 10000);
     }
 
-    let hasilJudul = "";
-    let hasilEmoji = "";
-    let embedColor = "#FF0000";
-
-    if (angkaRandom === 7777) {
-      hasilJudul = "JACKPOT!!!";
-      hasilEmoji = "💎💎💎";
-      embedColor = "#FFD700";
-    } else if (angkaRandom > 9500) {
-      hasilJudul = "WOW, SUPER RARE!";
-      hasilEmoji = "🎉🎉";
-      embedColor = "#FF69B4";
-    } else if (angkaRandom > 8000) {
-      hasilJudul = "LUMAYAN, RARE!";
-      hasilEmoji = "👍";
-      embedColor = "#00BFFF";
-    } else {
-      hasilJudul = "Anda Kurang Beruntung";
-      hasilEmoji = "꽝";
+    // Inisialisasi data jika ada yang kurang
+    if (!stats[userId].plays) {
+      stats[userId].plays = 0;
     }
 
-    // 4. BUAT & KIRIM EMBED (Tetap sama seperti sebelumnya)
+    // Kurangi saldo untuk taruhan
+    stats[userId].balance -= betAmount;
+    stats[userId].plays += 1;
+
+    // --- LOGIKA PERMAINAN ---
+    const items = ["🍒", "🍊", "🍋", "🍉", "🍇", "⭐", "💎"];
+    const reels = [];
+    for (let i = 0; i < 3; i++) {
+      reels.push(items[Math.floor(Math.random() * items.length)]);
+    }
+
+    const resultMessage = `[ ${reels.join(" | ")} ]`;
+    let win = false;
+    let winnings = 0;
+    let resultTitle = "Anda Kalah!";
+    let color = "#FF0000"; // Merah untuk kalah
+
+    if (reels[0] === reels[1] && reels[1] === reels[2]) {
+      win = true;
+      winnings = betAmount * 5; // Jackpot 5x lipat
+      stats[userId].balance += winnings;
+      resultTitle = "JACKPOT! 🎰 Anda Menang Besar!";
+      color = "#FFD700"; // Emas untuk jackpot
+    } else if (reels[0] === reels[1] || reels[1] === reels[2]) {
+      win = true;
+      winnings = betAmount * 2; // Kemenangan kecil 2x lipat
+      stats[userId].balance += winnings;
+      resultTitle = "Anda Menang!";
+      color = "#00FF00"; // Hijau untuk menang
+    }
+
+    // Tulis data terbaru ke file
+    writeStats(stats);
+
+    // --- KIRIM HASIL ---
     const embed = new EmbedBuilder()
-      .setColor(embedColor)
-      .setTitle("🎰 Mesin Slot Berputar... 🎰")
+      .setColor(color)
+      .setTitle(resultTitle)
+      .setDescription(resultMessage)
       .addFields(
-        { name: `${hasilJudul} ${hasilEmoji}`, value: "\u200B" },
         {
-          name: "Angka yang Anda dapat:",
-          value: `**${angkaRandom.toString()}**`,
-          inline: false,
+          name: "Taruhan Anda",
+          value: `${betAmount.toLocaleString()}`,
+          inline: true,
+        },
+        {
+          name: "Hadiah Dimenangkan",
+          value: `${winnings.toLocaleString()}`,
+          inline: true,
+        },
+        {
+          name: "Saldo Akhir",
+          value: `**${stats[userId].balance.toLocaleString()}**`,
         }
       )
-      .setTimestamp()
-      .setFooter({
-        text: `Diminta oleh ${message.author.tag}`,
-        iconURL: message.author.displayAvatarURL({ dynamic: true }),
-      });
+      .setFooter({ text: `Dimainkan oleh ${message.author.username}` })
+      .setTimestamp();
 
     message.channel.send({ embeds: [embed] });
-
-    // Tambah jumlah main pemain
-    playCount++;
-    stats[playerId] = { playCount: playCount };
-    writeStats(stats);
   },
 };

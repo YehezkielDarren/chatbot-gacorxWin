@@ -14,7 +14,7 @@ module.exports = {
       return message.reply(
         "Harap masukkan jumlah deposit yang valid (angka positif)."
       );
-    } else if (amount > 1000000) {
+    } else if (amount > 100000) {
       return message.reply("Saldo deposit melebihi batas maksimal!");
     }
 

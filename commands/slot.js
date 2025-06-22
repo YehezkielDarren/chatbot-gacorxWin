@@ -104,13 +104,9 @@ module.exports = {
         {
           name: "Saldo Akhir",
           value: `**${userStats.balance.toLocaleString()}**`,
-        },
-        {
-          name: "Pity Counter",
-          value: `${userStats.pityCounter} / ${userStats.pityThreshold}`,
         }
       )
-      .setFooter({ text: `Dimainkan oleh: ${message.author.username}` })
+      .setFooter({ text: `Dimainkan oleh: **${message.author.username}**` })
       .setTimestamp();
 
     message.channel.send({ embeds: [embed] });

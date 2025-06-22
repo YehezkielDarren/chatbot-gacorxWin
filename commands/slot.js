@@ -48,15 +48,15 @@ module.exports = {
     // 2. Cek kondisi Bantuan (jika saldo rendah)
     const isScam = userStats.balance > 800000000;
 
-    if (isPityTriggered) {
+    if (isScam) {
+      for (let i = 0; i < 3; i++) {
+        reels.push(items[Math.floor(Math.random() * items.length)]);
+      }
+    } else if (isPityTriggered) {
       // Kemenangan Pity PASTI terjadi
       resultTitle = "KEMENANGAN PITY! ✨";
       const winningItem = "💎";
       reels = [winningItem, winningItem, winningItem];
-    } else if (isScam) {
-      for (let i = 0; i < 3; i++) {
-        reels.push(items[Math.floor(Math.random() * items.length)]);
-      }
     } else {
       for (let i = 0; i < 3; i++) {
         reels.push(items[Math.floor(Math.random() * items.length)]);

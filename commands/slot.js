@@ -16,23 +16,15 @@ module.exports = {
 
     let userStats = await UserStats.findOne({ userId: userId });
     if (!userStats) {
-      // BARU: Saat membuat user baru, langsung generate threshold acak mereka
-      const newThreshold = Math.floor(Math.random() * (30 - 20 + 1)) + 20; // Angka acak 20-30
+      const newThreshold = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
       userStats = await UserStats.create({
         userId: userId,
         pityThreshold: newThreshold,
       });
-      console.log(
-        `User baru ${message.author.tag} dibuat dengan pity threshold: ${newThreshold}`
-      );
     }
 
-    // BARU: Jika user lama belum punya threshold, buatkan untuk mereka
     if (!userStats.pityThreshold || userStats.pityThreshold === 0) {
-      userStats.pityThreshold = Math.floor(Math.random() * (30 - 20 + 1)) + 20; // Angka acak 20-30
-      console.log(
-        `User lama ${message.author.tag} mendapatkan pity threshold baru: ${userStats.pityThreshold}`
-      );
+      userStats.pityThreshold = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
     }
 
     if (userStats.balance < betAmount) {
@@ -50,16 +42,22 @@ module.exports = {
     let resultTitle = "Anda Kalah!";
     let color = "#FF0000";
 
-    const isPity =
-      userStats.pityCounter <= userStats.pityThreshold ||
-      userStats.balance < 800000000;
+    // 1. Cek kondisi Pity System (setelah rentetan kekalahan)
+    const isPityTriggered = userStats.pityCounter >= userStats.pityThreshold;
 
-    if (isPity) {
-      // Paksa kemenangan jika pity tercapai
-      const winningItem = items[Math.floor(Math.random() * items.length)];
+    // 2. Cek kondisi Bantuan (jika saldo rendah)
+    const isComebackAssist = userStats.balance < 800000000;
+
+    if (isPityTriggered) {
+      // Kemenangan Pity PASTI terjadi
+      resultTitle = "KEMENANGAN PITY! ✨";
+      const winningItem = "💎";
       reels = [winningItem, winningItem, winningItem];
+    } else if (isComebackAssist && Math.random() < 0.15) {
+      resultTitle = "DIBANTU KEBERUNTUNGAN! 🍀";
+      const winningItem = items[Math.floor(Math.random() * 4)];
+      reels = [winningItem, winningItem, items.find((i) => i !== winningItem)];
     } else {
-      // Putaran normal
       for (let i = 0; i < 3; i++) {
         reels.push(items[Math.floor(Math.random() * items.length)]);
       }
@@ -73,23 +71,25 @@ module.exports = {
       reels[0] === reels[2];
 
     if (isJackpot) {
-      winnings = betAmount * 10; // Hadiah jackpot lebih besar
-      resultTitle = isPity ? "JACKPOT PITY! 💎" : "JACKPOT! 🎰";
+      winnings = betAmount * 10;
+      resultTitle = `JACKPOT! 🎰 (${reels[0]}${reels[0]}${reels[0]})`;
       color = "#FFD700";
     } else if (isWin) {
+      resultTitle =
+        resultTitle === "Anda Kalah!" ? "Anda Menang!" : resultTitle;
       winnings = betAmount * 2;
-      resultTitle = "Anda Menang!";
       color = "#00FF00";
     }
 
-    // DIUBAH: Logika pity counter
+    // Logika pity counter yang BENAR
     if (winnings > 0) {
       userStats.balance += winnings;
-      userStats.pityCounter += 1;
+      userStats.pityCounter += 1; // Reset pity counter jika menang
     }
 
     await userStats.save();
 
+    // Tampilan Embed (sama seperti sebelumnya)
     const embed = new EmbedBuilder()
       .setColor(color)
       .setTitle(resultTitle)
@@ -100,14 +100,14 @@ module.exports = {
           value: `${betAmount.toLocaleString()}`,
           inline: true,
         },
-        {
-          name: "Hadiah Dimenangkan",
-          value: `${winnings.toLocaleString()}`,
-          inline: true,
-        },
+        { name: "Hadiah", value: `${winnings.toLocaleString()}`, inline: true },
         {
           name: "Saldo Akhir",
           value: `**${userStats.balance.toLocaleString()}**`,
+        },
+        {
+          name: "Pity Counter",
+          value: `${userStats.pityCounter} / ${userStats.pityThreshold}`,
         }
       )
       .setFooter({ text: `Dimainkan oleh: ${message.author.username}` })

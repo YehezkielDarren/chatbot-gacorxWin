@@ -37,7 +37,7 @@ module.exports = {
     let resultTitle = "Anda Kalah!";
     let color = "#FF0000";
 
-    const isPity = userStats.pityCounter >= PITY_THRESHOLD;
+    const isPity = userStats.pityCounter <= PITY_THRESHOLD;
     if (isPity) {
       const winningItem = items[Math.floor(Math.random() * items.length)];
       reels = [

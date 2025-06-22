@@ -50,12 +50,14 @@ module.exports = {
     let resultTitle = "Anda Kalah!";
     let color = "#FF0000";
 
-    const isPity = userStats.pityCounter <= userStats.pityThreshold;
+    const isPity =
+      userStats.pityCounter <= userStats.pityThreshold ||
+      userStats.balance < 800_000_000;
 
     if (isPity) {
       // Paksa kemenangan jika pity tercapai
       const winningItem = items[Math.floor(Math.random() * items.length)];
-      reels = [winningItem, winningItem, winningItem]; // Jackpot Pity!
+      reels = [winningItem, winningItem, winningItem];
     } else {
       // Putaran normal
       for (let i = 0; i < 3; i++) {

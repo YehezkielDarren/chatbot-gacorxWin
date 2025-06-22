@@ -46,17 +46,17 @@ module.exports = {
     const isPityTriggered = userStats.pityCounter <= userStats.pityThreshold;
 
     // 2. Cek kondisi Bantuan (jika saldo rendah)
-    const isComebackAssist = userStats.balance < 800000000;
+    const isScam = userStats.balance > 800000000;
 
     if (isPityTriggered) {
       // Kemenangan Pity PASTI terjadi
       resultTitle = "KEMENANGAN PITY! ✨";
       const winningItem = "💎";
       reels = [winningItem, winningItem, winningItem];
-    } else if (isComebackAssist && Math.random() < 0.15) {
-      resultTitle = "DIBANTU KEBERUNTUNGAN! 🍀";
-      const winningItem = items[Math.floor(Math.random() * 4)];
-      reels = [winningItem, winningItem, items.find((i) => i !== winningItem)];
+    } else if (isScam) {
+      for (let i = 0; i < 3; i++) {
+        reels.push(items[Math.floor(Math.random() * items.length)]);
+      }
     } else {
       for (let i = 0; i < 3; i++) {
         reels.push(items[Math.floor(Math.random() * items.length)]);

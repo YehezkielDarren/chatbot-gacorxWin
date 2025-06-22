@@ -43,7 +43,7 @@ module.exports = {
     let color = "#FF0000";
 
     // 1. Cek kondisi Pity System (setelah rentetan kekalahan)
-    const isPityTriggered = userStats.pityCounter >= userStats.pityThreshold;
+    const isPityTriggered = userStats.pityCounter <= userStats.pityThreshold;
 
     // 2. Cek kondisi Bantuan (jika saldo rendah)
     const isComebackAssist = userStats.balance < 800000000;

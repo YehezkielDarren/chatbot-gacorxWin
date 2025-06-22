@@ -106,12 +106,6 @@ module.exports = {
         {
           name: "Saldo Akhir",
           value: `**${userStats.balance.toLocaleString()}**`,
-        },
-        // BARU: Tampilkan status pity untuk debugging atau info
-        {
-          name: "Pity Counter",
-          value: `${userStats.pityCounter} / ${userStats.pityThreshold}`,
-          inline: false,
         }
       )
       .setFooter({ text: `Dimainkan oleh: ${message.author.username}` })

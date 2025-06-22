@@ -9,7 +9,7 @@ module.exports = {
   async execute(message, args) {
     const userId = message.author.id;
     const betAmount = parseInt(args[0], 10);
-    const PITY_THRESHOLD = 75;
+    const PITY_THRESHOLD = 20;
 
     if (isNaN(betAmount) || betAmount <= 0) {
       return message.reply("Harap masukkan nominal taruhan yang valid.");

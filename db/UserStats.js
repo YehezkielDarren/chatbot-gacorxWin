@@ -1,10 +1,11 @@
-const { Schema, model } = require('mongoose');
+const { Schema, model } = require("mongoose");
 
 const userStatsSchema = new Schema({
-    userId: { type: String, required: true, unique: true },
-    balance: { type: Number, default: 0 },
-    plays: { type: Number, default: 0 },
-    pityCounter: { type: Number, default: 0 },
+  userId: { type: String, required: true, unique: true },
+  balance: { type: Number, default: 0 },
+  plays: { type: Number, default: 0 },
+  pityCounter: { type: Number, default: 0 },
+  pityThreshold: { type: Number, default: 0 },
 });
 
-module.exports = model('UserStats', userStatsSchema);
+module.exports = model("UserStats", userStatsSchema);

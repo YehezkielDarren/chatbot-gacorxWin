@@ -1,60 +1,43 @@
 const { EmbedBuilder } = require("discord.js");
-const fs = require("fs");
-const path = require("path");
-
-const dbPath = path.join(__dirname, "..", "db", "user-stats.json");
-
-const readStats = () => {
-  try {
-    const data = fs.readFileSync(dbPath, "utf8");
-    return JSON.parse(data);
-  } catch (error) {
-    return {};
-  }
-};
-
-const writeStats = (data) => {
-  fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
-};
+const UserStats = require("../db/UserStats");
 
 module.exports = {
   name: "slot",
   description: "Mainkan mesin slot dengan taruhan!",
   aliases: ["judi", "gacha"],
   usage: "!slot <nominal_taruhan>",
-  execute(message, args) {
+  async execute(message, args) {
     const userId = message.author.id;
     const betAmount = parseInt(args[0], 10);
-    const stats = readStats();
     const PITY_THRESHOLD = 75;
 
-    // --- VALIDASI ---
     if (isNaN(betAmount) || betAmount <= 0) {
       return message.reply("Harap masukkan nominal taruhan yang valid.");
     }
-    if (
-      !stats[userId] ||
-      stats[userId].balance === undefined ||
-      stats[userId].balance < betAmount
-    ) {
+
+    // Ambil data user, atau buat data default jika tidak ada
+    let userStats = await UserStats.findOne({ userId: userId });
+    if (!userStats) {
+      userStats = await UserStats.create({ userId: userId });
+    }
+
+    if (userStats.balance < betAmount) {
       return message.reply(
-        "Saldo Anda tidak cukup untuk melakukan taruhan ini. Cek saldo dengan `!saldo` atau `!deposit`."
+        "Saldo Anda tidak cukup untuk melakukan taruhan ini."
       );
     }
 
-    // --- INISIALISASI ---
-    stats[userId].plays = (stats[userId].plays || 0) + 1;
-    stats[userId].pityCounter = stats[userId].pityCounter || 0;
-    stats[userId].balance -= betAmount;
+    // Kurangi saldo, tambah jumlah main
+    userStats.balance -= betAmount;
+    userStats.plays += 1;
 
-    // --- LOGIKA PERMAINAN ---
     const items = ["🍒", "🍊", "🍋", "🍉", "🍇", "⭐", "💎"];
+    let reels = [];
     let winnings = 0;
     let resultTitle = "Anda Kalah!";
     let color = "#FF0000";
-    let reels = [];
 
-    const isPity = stats[userId].pityCounter <= PITY_THRESHOLD;
+    const isPity = userStats.pityCounter >= PITY_THRESHOLD;
     if (isPity) {
       const winningItem = items[Math.floor(Math.random() * items.length)];
       reels = [
@@ -68,7 +51,6 @@ module.exports = {
       }
     }
 
-    // Tentukan hasil (Sekarang 'reels' bisa diakses di sini)
     const isJackpot = reels[0] === reels[1] && reels[1] === reels[2];
     const isWin =
       isPity ||
@@ -87,15 +69,14 @@ module.exports = {
       color = "#00FF00";
     }
 
-    // --- UPDATE DATA ---
     if (winnings > 0) {
-      stats[userId].balance += winnings;
-      stats[userId].pityCounter += 1;
+      userStats.balance += winnings;
+      userStats.pityCounter += 1;
     }
 
-    writeStats(stats);
+    // Simpan semua perubahan ke database
+    await userStats.save();
 
-    // --- KIRIM HASIL ---
     const embed = new EmbedBuilder()
       .setColor(color)
       .setTitle(resultTitle)
@@ -113,11 +94,13 @@ module.exports = {
         },
         {
           name: "Saldo Akhir",
-          value: `**${stats[userId].balance.toLocaleString()}**`,
+          value: `**${userStats.balance.toLocaleString()}**`,
         }
       )
       .setFooter({
-        text: `Pengguna : \*${message.author.tag}*\.`,
+        text: `Pity dalam ${
+          PITY_THRESHOLD - userStats.pityCounter
+        } putaran lagi.`,
       })
       .setTimestamp();
 

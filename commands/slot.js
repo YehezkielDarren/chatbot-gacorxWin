@@ -33,7 +33,11 @@ module.exports = {
       return message.reply("Harap masukkan nominal taruhan yang valid.");
     }
 
-    if (!stats[userId] || stats[userId].balance < betAmount) {
+    if (
+      !stats[userId] ||
+      stats[userId].balance === undefined ||
+      stats[userId].balance < betAmount
+    ) {
       return message.reply(
         "Saldo Anda tidak cukup untuk melakukan taruhan ini."
       );

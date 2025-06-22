@@ -52,7 +52,7 @@ module.exports = {
 
     const isPity =
       userStats.pityCounter <= userStats.pityThreshold ||
-      userStats.balance < 800_000_000;
+      userStats.balance < 800000000;
 
     if (isPity) {
       // Paksa kemenangan jika pity tercapai

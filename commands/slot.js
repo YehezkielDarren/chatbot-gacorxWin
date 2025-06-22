@@ -98,9 +98,7 @@ module.exports = {
         }
       )
       .setFooter({
-        text: `Pity dalam ${
-          PITY_THRESHOLD - userStats.pityCounter
-        } putaran lagi.`,
+        text: `Dimainkan oleh: ${message.author.username}`,
       })
       .setTimestamp();
 

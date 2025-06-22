@@ -129,6 +129,6 @@ module.exports = {
       .setFooter({ text: `Dimainkan oleh ${message.author.username}` })
       .setTimestamp();
 
-    message.channel.send({ embeds: [embed] });
+    return message.channel.send({ embeds: [embed] });
   },
 };

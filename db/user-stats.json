@@ -1,7 +1,8 @@
 {
   "753505735153025045": {
-    "playCount": 1,
-    "balance": 999900,
-    "plays": 1
+    "playCount": 0,
+    "balance": 0,
+    "plays": 0,
+    "pityCounter": 0
   }
 }

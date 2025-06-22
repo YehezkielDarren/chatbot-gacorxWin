@@ -37,7 +37,9 @@ module.exports = {
             inline: true,
           }
         )
-        .setImage("https://tenor.com/bTZoU.gif") // URL gambar banner, bisa diganti
+        .setImage(
+          "https://i.pinimg.com/736x/3a/1c/3b/3a1c3b261b6121afb0f977cfde75a205.jpg"
+        ) // URL gambar banner, bisa diganti
         .setTimestamp() // Menampilkan waktu pesan dikirim
         .setFooter({
           text: `Diminta oleh ${message.author.username}`,

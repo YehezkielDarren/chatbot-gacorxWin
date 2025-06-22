@@ -32,88 +32,74 @@ module.exports = {
     if (isNaN(betAmount) || betAmount <= 0) {
       return message.reply("Harap masukkan nominal taruhan yang valid.");
     }
-
     if (
       !stats[userId] ||
       stats[userId].balance === undefined ||
       stats[userId].balance < betAmount
     ) {
       return message.reply(
-        "Saldo Anda tidak cukup untuk melakukan taruhan ini."
+        "Saldo Anda tidak cukup untuk melakukan taruhan ini. Cek saldo dengan `!saldo` atau `!deposit`."
       );
     }
 
-    // Inisialisasi data jika ada yang kurang
-    if (!stats[userId].plays) {
-      stats[userId].plays = 0;
-    }
-
-    // Kurangi saldo untuk taruhan
+    // --- INISIALISASI ---
+    stats[userId].plays = (stats[userId].plays || 0) + 1;
+    stats[userId].pityCounter = stats[userId].pityCounter || 0;
     stats[userId].balance -= betAmount;
-    stats[userId].plays += 1;
 
     // --- LOGIKA PERMAINAN ---
-    // Cek Pity System
-    if (stats[userId].pityCounter >= PITY_THRESHOLD) {
-      forcedWin = true;
+    const items = ["🍒", "🍊", "🍋", "🍉", "🍇", "⭐", "💎"];
+    let winnings = 0;
+    let resultTitle = "Anda Kalah!";
+    let color = "#FF0000";
+    let reels = [];
+
+    const isPity = stats[userId].pityCounter <= PITY_THRESHOLD;
+    if (isPity) {
       const winningItem = items[Math.floor(Math.random() * items.length)];
-      // Paksa menang dengan dua item yang sama
-      reels = [winningItem, winningItem, items.find((i) => i !== winningItem)];
+      reels = [
+        winningItem,
+        winningItem,
+        items.find((i) => i !== winningItem) || "⭐",
+      ];
     } else {
-      // Logika normal jika tidak ada pity
       for (let i = 0; i < 3; i++) {
         reels.push(items[Math.floor(Math.random() * items.length)]);
       }
     }
 
-    const resultMessage = `[ ${reels.join(" | ")} ]`;
-    let win = false;
-    let winnings = 0;
-    let resultTitle = "Anda Kalah!";
-    let color = "#FF0000"; // Merah untuk kalah
+    // Tentukan hasil (Sekarang 'reels' bisa diakses di sini)
+    const isJackpot = reels[0] === reels[1] && reels[1] === reels[2];
+    const isWin =
+      isPity ||
+      isJackpot ||
+      reels[0] === reels[1] ||
+      reels[1] === reels[2] ||
+      reels[0] === reels[2];
 
-    if (forcedWin || (reels[0] === reels[1] && reels[1] === reels[2])) {
-      // Jackpot (tidak bisa didapat dari pity)
-      if (!forcedWin && reels[0] === reels[1] && reels[1] === reels[2]) {
-        win = true;
-        winnings = betAmount * 5; // Jackpot 5x lipat
-        stats[userId].balance += winnings;
-        resultTitle = "JACKPOT! 🎰 Anda Menang Besar!";
-        color = "#FFD700"; // Emas untuk jackpot
-      } else {
-        // Kemenangan biasa (atau dari pity)
-        win = true;
-        winnings = betAmount * 2; // Kemenangan kecil 2x lipat
-        stats[userId].balance += winnings;
-        resultTitle = forcedWin ? "Kemenangan Pity! ✨" : "Anda Menang!";
-        color = "#00FF00"; // Hijau untuk menang
-      }
-    } else if (reels[0] === reels[1] || reels[1] === reels[2]) {
-      // Kemenangan biasa (jika pity tidak aktif)
-      win = true;
-      winnings = betAmount * 2; // Kemenangan kecil 2x lipat
-      stats[userId].balance += winnings;
-      resultTitle = "Anda Menang!";
+    if (isJackpot) {
+      winnings = betAmount * 5;
+      resultTitle = "JACKPOT! 🎰 Anda Menang Besar!";
+      color = "#FFD700";
+    } else if (isWin) {
+      winnings = betAmount * 2;
+      resultTitle = isPity ? "Kemenangan Pity! ✨" : "Anda Menang!";
       color = "#00FF00";
     }
 
-    // --- UPDATE PITY COUNTER ---
-    if (win) {
-      // Jika menang, reset counter
-      stats[userId].pityCounter = 0;
-    } else {
-      // Jika kalah, tambah counter
+    // --- UPDATE DATA ---
+    if (winnings > 0) {
+      stats[userId].balance += winnings;
       stats[userId].pityCounter += 1;
     }
 
-    // Tulis data terbaru ke file
     writeStats(stats);
 
     // --- KIRIM HASIL ---
     const embed = new EmbedBuilder()
       .setColor(color)
       .setTitle(resultTitle)
-      .setDescription(resultMessage)
+      .setDescription(`[ ${reels.join(" | ")} ]`)
       .addFields(
         {
           name: "Taruhan Anda",
@@ -130,9 +116,11 @@ module.exports = {
           value: `**${stats[userId].balance.toLocaleString()}**`,
         }
       )
-      .setFooter({ text: `Dimainkan oleh ${message.author.username}` })
+      .setFooter({
+        text: `Pengguna : \*${message.author.tag}*\.`,
+      })
       .setTimestamp();
 
-    return message.channel.send({ embeds: [embed] });
+    message.channel.send({ embeds: [embed] });
   },
 };

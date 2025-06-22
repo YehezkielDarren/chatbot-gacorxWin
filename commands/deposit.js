@@ -24,7 +24,8 @@ const writeStats = (data) => {
 
 module.exports = {
   name: "deposit",
-  description: "Menambahkan uang fiktif ke saldo Anda untuk bermain.",
+  description:
+    "Menambahkan uang fiktif ke saldo Anda untuk bermain. Maksimum deposit adalah 100_000",
   aliases: ["depo"],
   usage: "!deposit <jumlah>",
   execute(message, args) {
@@ -36,6 +37,8 @@ module.exports = {
       return message.reply(
         "Harap masukkan jumlah deposit yang valid (angka positif)."
       );
+    } else if (amount > 100000) {
+      return message.reply("Deposit melebihi batas maksimum.");
     }
 
     const stats = readStats();
